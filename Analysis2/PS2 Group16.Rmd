@@ -1,0 +1,215 @@
+---
+title: "PS2 Group16"
+author: "Shailendra Patil, Mingyang Ma, Apurva Gupta"
+date: "January 20, 2018"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+#knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Question 1
+
+####Installing NHANES package and ggplot Libraries
+
+```{r}
+#install.packages("NHANES")
+#install.packages("ggplot2")
+
+```
+
+####Activating NHANES package and ggplot libraries
+
+```{r}
+library(NHANES)
+library(ggplot2)
+
+```
+
+####Creating a data frame which contains only the people sample aged 18 and up
+
+```{r}
+Adults = subset(NHANES, Age >= 18)
+head(Adults)
+
+```
+
+####Creating an object of ggplot Library
+
+```{r}
+ggobj = ggplot(Adults, aes(x=Adults$Height))
+```
+
+####Plotting Histogram for Male and Female Heights
+
+```{r}
+ggobj + geom_histogram(binwidth=3)+facet_grid(~Adults$Gender)
+```
+
+####Observation
+The histogram shows that both male and female heights have approximately same center, spread and distribution.
+
+
+####Checking Normality by plotting qqplot graphs.
+
+```{r}
+ ggplot(Adults, aes(sample=Adults$Height)) + stat_qq() +facet_grid(~Adults$Gender)
+```
+
+#####Observation
+
+We can observe that qqplots of male heights and female heights are approximately straight lines. Hence, they are approximately normal.
+
+####Creating scatter plot to find if it is an additive/multiplicative shift.
+
+```{r}
+Maleheight=Adults$Height[Adults$Gender=="male"]
+Femaleheight=Adults$Height[Adults$Gender=="female"]
+qq.df=as.data.frame(qqplot(Maleheight,Femaleheight,plot.it = FALSE))
+ggplot(qq.df,aes(x=x,y=y))+geom_point()+geom_abline()
+```
+
+#####Observation
+
+We can observe that it is a straight line parallel to reference line. Therefore,  Male and Female heights are in additive shift.
+
+####Quantitative Expression of Male and Female Heights
+
+```{r}
+Adults[is.na(Adults$Height),]$Height <-mean(Adults$Height,na.rm =T)
+mean_diff = mean(Adults$Height[Adults$Gender=="male"]) - mean(Adults$Height[Adults$Gender=="female"])
+mean_diff
+```
+
+#####Observation
+
+Quantitatively, We can say that difference in mean heights of male and female is about 14 units.
+
+#Question 2
+
+####Creating an object of ggplot Library
+
+```{r}
+ggobj1 = ggplot(Adults, aes(x=Weight))
+```
+
+####Plotting Histogram for Male and Female Weights
+
+```{r}
+ggobj1 + geom_histogram(binwidth=1)+facet_grid(~Adults$Gender)
+```
+
+####Observation
+The histogram shows that both male and female weights have approximately same distribution with a slightly shifted center.
+
+
+####Checking Normality by plotting qqplot graphs.
+
+```{r}
+ ggplot(Adults, aes(sample=Adults$Weight)) + stat_qq() +facet_grid(~Adults$Gender)
+```
+
+#####Observation
+
+We can observe that qqplots of male Weights and female Weights are curved lines. Hence, we cannot conclude that they are approximately normal.
+
+####Checking Normality by plotting qqplot graphs of log weights.
+
+```{r}
+ ggplot(Adults, aes(sample=log(Adults$Weight))) + stat_qq() +facet_grid(~Adults$Gender)
+```
+
+#####Observation
+
+We can observe that qqplots of log male and female Weights are appromimately straight lines. Hence, we can conclude that log values are approximately normal.
+
+####Creating scatter plot to find if it is an additive/multiplicative shift.
+
+```{r}
+Maleweight=Adults$Weight[Adults$Gender=="male"]
+Femaleweight=Adults$Weight[Adults$Gender=="female"]
+qq.df=as.data.frame(qqplot(Maleweight,Femaleweight,plot.it = FALSE))
+ggplot(qq.df,aes(x=x,y=y))+geom_point()+geom_abline()
+```
+
+#####Observation
+
+We can observe that it is approximately a straight line parallel to reference line. Therefore, we can say that Male and Female weights are in additive shift.
+
+
+####Quantitative Expression of Male and Female Weights
+
+```{r}
+Adults[is.na(Adults$Weight),]$Weight <-mean(Adults$Weight,na.rm =T)
+mean_diff = mean(Adults$Weight[Adults$Gender=="male"]) - mean(Adults$Weight[Adults$Gender=="female"])
+mean_diff
+```
+
+#####Observation
+
+Quantitatively, We can say that difference in mean weights of male and female is about 13 units.
+
+# Question 3
+
+####Fitting a linear model to predict Heights from Gender
+
+```{r}
+Adult.lm=lm(Height~Gender,data=Adults)
+Adult.res=data.frame(Gender=Adults$Gender,residual=residuals(Adult.lm))
+Adult.fitted = sort(fitted.values(Adult.lm)) - mean(fitted.values(Adult.lm))
+Adult.residuals = sort(residuals(Adult.lm))
+```
+
+
+####Checking normlaity of residuals
+
+```{r}
+ggplot(Adult.res, aes(sample = residual)) +
+  stat_qq() + facet_wrap(~Gender, ncol=2) 
+```
+
+#####Observation
+
+We can observe that residuals are approximately normal.
+
+####Creating a data frame with fiited values and residuals.
+
+
+```{r}
+n = length(Adult.residuals)
+f.value = (0.5:(n - 0.5)) / n
+Adult.fit = data.frame(f.value, Fitted=Adult.fitted, Residuals=Adult.residuals)
+```
+
+
+#### We will take several variables and gathers them together, so you have more observations but fewer columns.
+
+```{r}
+library(tidyr)
+adult.fit.long = Adult.fit %>% gather(type, value, Fitted:Residuals)
+```
+
+
+#### Residual fit plot
+
+```{r}
+ggplot(adult.fit.long, aes(x=f.value, y=value)) +
+  geom_point() + facet_wrap(~type)
+```
+
+
+#####Observation
+
+The fitted values are close together compared to the residuals. While the model may be useful,it only accounts for a fraction of the variation in the data.We can check the results quantitatively.
+
+#### Quantifying the model fit
+
+```{r}
+var(Adult.fitted) / var(Adults$Height)
+```
+
+#####Observation
+the model captures 47% of the variance of the data." The remaining 53% is in the residuals.
