@@ -1,5 +1,7 @@
 Worked in Group of 3
+
 Contributors:
+
 Apurva Gupta, Shailendra Patil, Surbhi Paithankar
 
 High systolic blood pressure is a strong predictor of heart attacks and strokes. A health
