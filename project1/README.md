@@ -53,4 +53,4 @@ description of the data.
 4. He doesn't need to see the R code, but wants to be able to reproduce your work if required.
 
 5. The researcher has noticed that student reports on complex real-world phenomena often
-(accidentally one hopes) say offensive things, and would prefer if you didn't do that.
+(accidentally one hopes) say offensive things, and would prefer if you didn't do that
