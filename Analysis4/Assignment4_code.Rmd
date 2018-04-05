@@ -1,0 +1,105 @@
+---
+title: "Assignment4_code"
+author: "Apurva Gupta,Shailendra Patil,Surbhi Paithankar"
+date: "2/19/2018"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r warning=FALSE,message=FALSE,echo=FALSE}
+library(gapminder)
+library(ggplot2)
+library(dplyr)
+library(GGally)
+library(broom)
+library(gridExtra)
+```
+
+#### Loading the date:
+```{r warning=FALSE,message=FALSE,echo=FALSE}
+movie_budgets = read.table("/Users/shailendrapatil/Spring2018/EDA/PS4/movie_budgets.txt",header=TRUE)
+head(movie_budgets)
+```
+
+#### Checking the pairwise relationship
+```{r warning=FALSE,message=FALSE,echo=FALSE}
+ggpairs(movie_budgets, columns = c("year", "length", "budget"))
+```
+We can observe that budget is right skewed, so we take log value . Even legnth is right skewed, but we ignore and do not take log.
+
+#### Fitting the model and checking which one is better
+```{r warning=FALSE,message=FALSE,echo=FALSE}
+plot_1 = ggplot(movie_budgets, aes(x = year, y = log10(budget))) + geom_point() + 
+  geom_smooth(method="lm",color="orange") + geom_smooth(color="blue",span = 0,method.args = list(degree = 2)) + ggtitle("Budget over Time")
+
+plot_2 = ggplot(movie_budgets, aes(x = length, y = log10(budget))) + geom_point() + 
+  geom_smooth(method="lm",color="orange") + geom_smooth(color="blue",span = 0,method.args = list(degree = 2)) + ggtitle("Budget vs Length")
+
+grid.arrange(plot_1,plot_2,ncol=1)
+```
+
+#### Checking the residuals plot
+```{r warning=FALSE,message=FALSE,echo=FALSE}
+model_year.lm = lm(log10(budget)~year,data = movie_budgets)
+model_year.lo = loess(log10(budget)~year,data = movie_budgets)
+model_length.lm = lm(log10(budget)~length,data = movie_budgets)
+model_length.lo = loess(log10(budget)~length,data = movie_budgets)
+model.year.lm.df = augment(model_year.lm)
+model.year.lo.df = augment(model_year.lo)
+model.length.lm.df = augment(model_length.lm)
+model.length.lo.df = augment(model_length.lo)
+
+plot1 = ggplot(model.year.lm.df, aes(x = year, y = .resid)) + geom_point() + geom_smooth()+ 
+  ggtitle("Budget vs Year Linear model") +geom_abline(slope = 0, intercept = 0)
+plot2 = ggplot(model.year.lm.df, aes(x = .fitted, y = sqrt(abs(.resid)))) + geom_point() + geom_smooth()+
+  ggtitle("Budget vs Year Linear model")
+plot3 = ggplot(model.year.lo.df, aes(x = year, y = .resid)) + geom_point() + geom_smooth()+ 
+  ggtitle("Budget vs Year Loess model") +geom_abline(slope = 0, intercept = 0)
+plot4 = ggplot(model.year.lo.df, aes(x = .fitted, y = sqrt(abs(.resid)))) + geom_point() + geom_smooth()+
+  ggtitle("Budget vs Year Loess model")
+plot5 = ggplot(model.length.lo.df, aes(x = length, y = .resid)) + geom_point() + geom_smooth()+ 
+  ggtitle("Budget vs Length Loess model") +geom_abline(slope = 0, intercept = 0)
+plot6 = ggplot(model.length.lo.df, aes(x = .fitted, y = sqrt(abs(.resid)))) + geom_point() + geom_smooth()+
+  ggtitle("Budget vs Length Loess model")
+plot7 = ggplot(model.length.lm.df, aes(x = length, y = .resid)) + geom_point() + geom_smooth()+ 
+  ggtitle("Budget vs Length Linear model") +geom_abline(slope = 0, intercept = 0)
+plot8 = ggplot(model.length.lm.df, aes(x = .fitted, y = sqrt(abs(.resid)))) + geom_point() + geom_smooth()+
+  ggtitle("Budget vs Length Linear model")
+grid.arrange(plot1,plot2,plot3,plot4,plot7,plot8,plot5,plot6,ncol=2)
+```
+
+#### Graph to check if interaction is needed
+```{r warning=FALSE,message=FALSE,echo=FALSE}
+ggplot(movie_budgets, aes(x = length, y = log10(budget))) + geom_point() + geom_smooth() + facet_grid(~cut_number(year, n = 8,dig.lab = 4)) + labs(title = "Budgest VS Length over Time")
+ggplot(movie_budgets, aes(x = year, y = log10(budget))) + geom_point() + geom_smooth() + facet_grid(~cut_number(length, n = 10,dig.lab = 4)) + labs(title = "Budget VS Time over Different length")
+```
+
+#### Graph for fitted model
+```{r warning=FALSE,message=FALSE,echo=FALSE}
+budget.lo =loess(log10(budget)~year*length, data = movie_budgets, span = 0.25,family = "symmetric", normalize = TRUE)
+budget.lo.df =data.frame(movie_budgets, .fitted =fitted.values(budget.lo), .resid =residuals(budget.lo))
+
+budget.grid = expand.grid(year= seq(1906,2005,10),length=seq(1,390,10))
+budget.predict =predict((budget.lo), newdata = budget.grid)
+budget.predict.df = data.frame(budget.grid,fit = as.vector(budget.predict))
+
+ggplot(budget.predict.df,aes(x = length, y = fit))+ geom_point()+ facet_wrap(~year,ncol = 4) +
+  geom_smooth(method.args =list(degree = 1))
+```
+
+#### geom_raster plot
+```{r warning=FALSE,message=FALSE,echo=FALSE}
+ggplot(budget.predict.df,aes(x = length, y = year, fill = fit))+ geom_raster()+coord_fixed()+ scale_fill_distiller(palette = "RdYlBu")+
+  facet_wrap(~cut_number(fit,n = 9), ncol = 3)
+```
+
+#### Graph with contours
+```{r warning=FALSE,message=FALSE,echo=FALSE}
+ggplot(budget.predict.df,aes(x = length, y = year, z = fit))+ geom_raster(aes(fill = fit))+coord_fixed()+ scale_fill_distiller(palette = "RdYlBu")+
+  geom_contour()
+```
